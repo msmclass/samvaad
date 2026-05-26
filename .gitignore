@@ -41,5 +41,4 @@ samvaad/frontend/out/
 
 # Embedded Next.js build outputs
 pkg/service/frontend_out/*
-pkg/service/frontend_out
 !pkg/service/frontend_out/placeholder.txt
