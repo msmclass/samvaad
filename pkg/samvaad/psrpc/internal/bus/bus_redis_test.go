@@ -160,5 +160,5 @@ func BenchmarkRedisMessageBus(b *testing.B) {
 
 func TestFoo(t *testing.T) {
 	foo := "asdf"
-	fmt.Println(*(*[]byte)(unsafe.Pointer(&foo)))
+	fmt.Println([]byte(foo))
 }

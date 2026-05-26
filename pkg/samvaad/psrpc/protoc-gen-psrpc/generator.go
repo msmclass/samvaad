@@ -414,7 +414,8 @@ func (t *psrpc) generateInterface(file *descriptor.FileDescriptorProto, service 
 			t.generateServerSignature(method, opts)
 		}
 	}
-	if iface == server {
+	switch iface {
+	case server:
 		for _, group := range t.topicGroupsForService(service) {
 			t.P(`  RegisterAll`, group.typeName, `Topics(`, group.topics.FormatParams(), `) error`)
 			t.P(`  DeregisterAll`, group.typeName, `Topics(`, group.topics.FormatParams(), `)`)
@@ -426,7 +427,7 @@ func (t *psrpc) generateInterface(file *descriptor.FileDescriptorProto, service 
 		t.P()
 		t.P(`  // Close immediately, without waiting for pending RPCs`)
 		t.P(`  Kill()`)
-	} else if iface == client {
+	case client:
 		t.P(`  // Close immediately, without waiting for pending RPCs`)
 		t.P(`  Close()`)
 	}
