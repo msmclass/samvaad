@@ -3,6 +3,11 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Samvaad Meet — Sovereign Bharat SFU',
   description: 'Completely free virtual meeting platform with zero trackers, military-grade E2EE, and low-resource optimizations.',
+  icons: {
+    icon: '/assets/icons/favicon.ico',
+    shortcut: '/assets/icons/favicon-32x32.png',
+    apple: '/assets/icons/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({

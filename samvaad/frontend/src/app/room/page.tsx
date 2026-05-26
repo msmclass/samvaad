@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Image } from 'react-native';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function RoomScreen() {
+function RoomContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -84,7 +84,14 @@ export default function RoomScreen() {
       {/* Header Info */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.roomName}>{room.toUpperCase()}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <Image 
+              source={{ uri: '/assets/logo/logo.png' }} 
+              style={{ width: 28, height: 28 }} 
+              resizeMode="contain"
+            />
+            <Text style={styles.roomName}>{room.toUpperCase()}</Text>
+          </View>
           <View style={styles.badgeRow}>
             {e2ee && (
               <View style={[styles.badge, styles.badgeSecure]}>
@@ -170,6 +177,18 @@ export default function RoomScreen() {
         </TouchableOpacity>
       </View>
     </View>
+  );
+}
+
+export default function RoomScreen() {
+  return (
+    <Suspense fallback={
+      <View style={{ flex: 1, backgroundColor: '#0b0c0e', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#9ca3af', fontSize: 16 }}>Loading Meeting Space...</Text>
+      </View>
+    }>
+      <RoomContent />
+    </Suspense>
   );
 }
 

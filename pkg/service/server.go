@@ -363,13 +363,7 @@ func (s *SamvaadServer) debugInfo(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func (s *SamvaadServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/" {
-		s.healthCheck(w, r)
-	} else {
-		http.NotFound(w, r)
-	}
-}
+
 
 func (s *SamvaadServer) healthCheck(w http.ResponseWriter, _ *http.Request) {
 	var updatedAt time.Time

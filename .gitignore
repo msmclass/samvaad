@@ -32,3 +32,14 @@ backupdocs
 backupdocs/
 venv
 venv/
+
+# Next.js Frontend ignores
+samvaad/frontend/node_modules/
+samvaad/frontend/.next/
+samvaad/frontend/out/
+#samvaad/frontend/public/assets/
+
+# Embedded Next.js build outputs
+pkg/service/frontend_out/*
+pkg/service/frontend_out
+!pkg/service/frontend_out/placeholder.txt

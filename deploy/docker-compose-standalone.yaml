@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  samvaad-redis:
+    image: redis:7-alpine
+    container_name: samvaad-redis-standalone
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-standalone-data:/data
+    networks:
+      - samvaad-standalone-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  samvaad-server:
+    image: ghcr.io/msmclass/samvaad-server:latest
+    container_name: samvaad-server-standalone
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "7880:7880"         # Backend Signaling and Twirp RPC APIs
+      - "7881:7881"         # TURN/TCP WebRTC traffic
+      - "7882:7882/udp"     # WebRTC media traffic (UDP)
+    environment:
+      # Standalone flag: when frontend UI is served from external CDN
+      # (e.g. Vercel, Netlify) and we only need the API endpoints
+      - DEVELOPMENT=true
+      - SAMVAAD_KEYS=devkey:secret
+      - REDIS_HOST=samvaad-redis
+      - REDIS_PORT=6379
+      - LOW_RESOURCE_MODE=true
+      - MEM_LIMIT_MIB=512
+      - GC_PERCENT=50
+      - NODE_IP=127.0.0.1
+    depends_on:
+      samvaad-redis:
+        condition: service_healthy
+    networks:
+      - samvaad-standalone-net
+
+networks:
+  samvaad-standalone-net:
+    driver: bridge
+
+volumes:
+  redis-standalone-data:
+    driver: local

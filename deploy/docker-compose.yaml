@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  samvaad-redis:
+    image: redis:7-alpine
+    container_name: samvaad-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - samvaad-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  samvaad-server:
+    image: ghcr.io/msmclass/samvaad-server:latest
+    container_name: samvaad-server
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "7880:7880"         # Unified Next.js Frontend UI + WebRTC Signaling API
+      - "7881:7881"         # TURN/TCP WebRTC traffic
+      - "7882:7882/udp"     # WebRTC media traffic (UDP)
+    environment:
+      # Developer Mode (auto-generates placeholders if keys are omitted)
+      - DEVELOPMENT=true
+      # Sovereign API Keys (Configure for Production)
+      - SAMVAAD_KEYS=devkey:secret
+      # Redis Connection for clustering, room states, and stream pub/sub
+      - REDIS_HOST=samvaad-redis
+      - REDIS_PORT=6379
+      # low-resource limits (military-grade optimizations for edge engines)
+      - LOW_RESOURCE_MODE=true
+      - MEM_LIMIT_MIB=512
+      - GC_PERCENT=50
+      # Public node IP configuration for external WebRTC client handshakes
+      - NODE_IP=127.0.0.1
+    depends_on:
+      samvaad-redis:
+        condition: service_healthy
+    networks:
+      - samvaad-net
+
+networks:
+  samvaad-net:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

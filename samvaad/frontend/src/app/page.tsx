@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'next/navigation';
 
 export default function HomeScreen() {
@@ -21,6 +21,13 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
+        <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          <Image 
+            source={{ uri: '/assets/logo/logo.png' }} 
+            style={{ width: 80, height: 80 }} 
+            resizeMode="contain"
+          />
+        </View>
         <Text style={styles.title}>SAMVAAD MEET</Text>
         <Text style={styles.subtitle}>Sovereign virtual meeting space — 100% Free & Secure</Text>
 
