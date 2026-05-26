@@ -1,0 +1,116 @@
+// Copyright 2026 Samvaad Project, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package signalling
+
+import (
+	"fmt"
+
+	"github.com/msmclass/samvaad/pkg/proto/samvaad"
+	"github.com/msmclass/samvaad/pkg/samvaad/logger"
+	"github.com/msmclass/samvaad/pkg/samvaad/utils"
+	"github.com/msmclass/samvaad/pkg/samvaad/psrpc"
+
+	"github.com/msmclass/samvaad/pkg/routing"
+	"github.com/msmclass/samvaad/pkg/rtc/types"
+
+	"google.golang.org/protobuf/proto"
+)
+
+var _ ParticipantSignaller = (*signallerAsync)(nil)
+
+type SignallerAsyncParams struct {
+	Logger      logger.Logger
+	Participant types.LocalParticipant
+}
+
+type signallerAsync struct {
+	params SignallerAsyncParams
+
+	*signallerAsyncBase
+}
+
+func NewSignallerAsync(params SignallerAsyncParams) ParticipantSignaller {
+	return &signallerAsync{
+		params:             params,
+		signallerAsyncBase: newSignallerAsyncBase(signallerAsyncBaseParams{Logger: params.Logger}),
+	}
+}
+
+func (s *signallerAsync) WriteMessage(msg proto.Message) error {
+	if msg == nil {
+		return nil
+	}
+
+	getMessageType := func(msg proto.Message) string {
+		messageType := "unknown"
+		if typed, ok := msg.(*samvaad.SignalResponse); ok {
+			messageType = fmt.Sprintf("%T", typed.Message)
+		}
+		return messageType
+	}
+
+	if s.params.Participant.IsDisconnected() {
+		s.params.Logger.Debugw(
+			"could not send message to participant, participant disconnected",
+			"messageType", getMessageType(msg),
+		)
+		return nil
+	}
+
+	if !s.params.Participant.IsReady() {
+		if typed, ok := msg.(*samvaad.SignalResponse); !ok {
+			s.params.Logger.Warnw(
+				"unknown message type", nil,
+				"messageType", fmt.Sprintf("%T", msg),
+			)
+		} else {
+			if typed.GetJoin() == nil {
+				return nil
+			}
+		}
+	}
+
+	sink := s.GetResponseSink()
+	if sink == nil {
+		s.params.Logger.Debugw(
+			"could not send message to participant, no sink",
+			"messageType", getMessageType(msg),
+		)
+		return nil
+	}
+
+	err := sink.WriteMessage(msg)
+	if err != nil {
+		if utils.ErrorIsOneOf(err, psrpc.Canceled, routing.ErrChannelClosed) {
+			s.params.Logger.Debugw(
+				"could not send message to participant",
+				"error", err,
+				"messageType", getMessageType(msg),
+			)
+			return nil
+		} else {
+			s.params.Logger.Warnw(
+				"could not send message to participant", err,
+				"messageType", getMessageType(msg),
+			)
+			return err
+		}
+	} else {
+		s.params.Logger.Debugw("sent signal response", "response", logger.Proto(msg))
+	}
+	return nil
+}
+
+

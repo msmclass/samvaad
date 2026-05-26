@@ -1,0 +1,120 @@
+# Copyright 2026 Samvaad Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build and Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-binaries:
+    name: Build samvaad-server for ${{ matrix.goos }}-${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Server & Client Platforms (x86_64 and ARM64)
+          - goos: linux
+            goarch: amd64
+            artifact_name: samvaad-server-linux-amd64
+          - goos: linux
+            goarch: arm64
+            artifact_name: samvaad-server-linux-arm64
+          - goos: windows
+            goarch: amd64
+            artifact_name: samvaad-server-windows-amd64.exe
+          - goos: windows
+            goarch: arm64
+            artifact_name: samvaad-server-windows-arm64.exe
+          - goos: darwin
+            goarch: amd64
+            artifact_name: samvaad-server-darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            artifact_name: samvaad-server-darwin-arm64
+          # Mobile platforms
+          - goos: android
+            goarch: arm64
+            artifact_name: samvaad-client-android-arm64
+          - goos: ios
+            goarch: arm64
+            artifact_name: samvaad-client-ios-arm64
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+
+      - name: Compile Samvaad Server Binary
+        run: |
+          mkdir -p build
+          # Disable CGO for pure static compilation (extreme portability across platforms!)
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o build/${{ matrix.artifact_name }} ./cmd/server
+
+      - name: Archive and Compress Binary
+        run: |
+          cd build
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            zip "${{ matrix.artifact_name }}.zip" "${{ matrix.artifact_name }}"
+          else
+            tar -czf "${{ matrix.artifact_name }}.tar.gz" "${{ matrix.artifact_name }}"
+          fi
+
+      - name: Upload Interim Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            build/*.zip
+            build/*.tar.gz
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download all compiled artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Prepare assets for release upload
+        run: |
+          mkdir -p release-assets
+          find release-artifacts -type f -name "*.zip" -exec cp {} release-assets/ \;
+          find release-artifacts -type f -name "*.tar.gz" -exec cp {} release-assets/ \;
+
+      - name: Publish Release with Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

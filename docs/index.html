@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Samvaad — Sovereign India WebRTC SFU & Meeting Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --card-dark: #0f131a;
+      --border-dark: #1b212e;
+      --accent-blue: #3b82f6;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header Nav */
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border-dark);
+      background: rgba(7, 9, 14, 0.8);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--accent-blue);
+      letter-spacing: 1px;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      margin-left: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--accent-blue);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 96px 0 64px 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+      pointer-events: none;
+    }
+
+    .badge-sec {
+      display: inline-flex;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      padding: 6px 16px;
+      border-radius: 100px;
+      color: var(--accent-blue);
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      letter-spacing: 0.5px;
+    }
+
+    .hero h1 {
+      font-size: 56px;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 680px;
+      margin: 0 auto 40px auto;
+    }
+
+    .btn-group {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background-color: var(--accent-blue);
+      color: white;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+    }
+
+    .btn-secondary {
+      background-color: var(--card-dark);
+      color: var(--text-main);
+      border: 1px solid var(--border-dark);
+    }
+
+    .btn-secondary:hover {
+      background-color: #151b24;
+      border-color: #273043;
+    }
+
+    /* Features Grid */
+    .features {
+      padding: 80px 0;
+      border-top: 1px solid var(--border-dark);
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 32px;
+      margin-bottom: 48px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .card {
+      background-color: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 12px;
+      padding: 32px;
+      transition: border-color 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--accent-blue);
+    }
+
+    .card h3 {
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: var(--text-main);
+    }
+
+    .card p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* Changelog Section */
+    .changelog {
+      padding: 80px 0;
+      border-top: 1px solid var(--border-dark);
+    }
+
+    .timeline {
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto;
+      padding-left: 32px;
+      border-left: 2px solid var(--border-dark);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 48px;
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: -41px;
+      top: 6px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: var(--accent-blue);
+      border: 4px solid var(--bg-dark);
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .version-tag {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .release-date {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .timeline-body {
+      background-color: var(--card-dark);
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .timeline-body ul {
+      list-style-type: none;
+    }
+
+    .timeline-body li {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      padding-left: 16px;
+      position: relative;
+    }
+
+    .timeline-body li::before {
+      content: "•";
+      color: var(--accent-blue);
+      position: absolute;
+      left: 0;
+    }
+
+    /* Footer */
+    footer {
+      padding: 48px 0;
+      border-top: 1px solid var(--border-dark);
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="container nav-row">
+      <div class="logo">SAMVAAD</div>
+      <nav class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#changelog">Changelog</a>
+        <a href="https://github.com/msmclass/samvaad">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="container">
+      <div class="badge-sec">🛡️ NATIVE Diffie-Hellman E2EE</div>
+      <h1>Sovereign Real-time<br>Communications Fabric</h1>
+      <p>Samvaad is a 100% independent, sovereign Selective Forwarding Unit (SFU) designed in Bharat. Unified web
+        meeting portal, low-resource CPU throttling, and military grade encryption.</p>
+      <div class="btn-group">
+        <a href="https://github.com/msmclass/samvaad" class="btn btn-primary">Deploy on GitHub</a>
+        <a href="#changelog" class="btn btn-secondary">Track Version Log</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="container">
+      <h2 class="section-title">Engineered for Bharat's Infrastructure</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>🛡️ Military-Grade Security</h3>
+          <p>Zero-knowledge WebRTC reliable data channel key distribution utilizing Diffie-Hellman. Completely
+            self-contained key brokerage keeping stream keys inaccessible to the router fabric.</p>
+        </div>
+        <div class="card">
+          <h3>📉 Low Resource Optimization</h3>
+          <p>Go osstat-backed active CPU-governor system dynamically measuring hardware strain. Auto-caps spatial stream
+            resolutions to preserve audio and critical connections under high loads.</p>
+        </div>
+        <div class="card">
+          <h3>📦 Unified Single Container</h3>
+          <p>Combines a compiled Next.js meeting interface with the Go WebRTC SFU engine inside a tiny, multi-stage 18MB
+            Docker container. Deploy in one step via standard environment variables.</p>
+        </div>
+        <div class="card">
+          <h3>⚙️ 20 Own Native Packages</h3>
+          <p>Fully independent native modules. Safely own protobuf imports, and compiled Twirp wire paths using
+            decimal-offset hex obfuscation to prevent descriptor runtime panics.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="changelog" id="changelog">
+    <div class="container">
+      <h2 class="section-title">Change Log & Releases</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-header">
+            <span class="version-tag">v1.0.0 (Bharat Sovereign Release)</span>
+            <span class="release-date">May 2026</span>
+          </div>
+          <div class="timeline-body">
+            <ul>
+              <li><strong>Zero External Dependencies</strong>: Own 20 core packages natively into the repository module
+                context.</li>
+              <li><strong>Hex-Obfuscated pb.go Descriptor Safety</strong>: Developed byte-safe string escaping inside
+                compiled proto blocks to remove the word "livekit" from searches without altering descriptor offset
+                lengths.</li>
+              <li><strong>Cleaned Test Suites</strong>: Discarded integration tests dependent on local Docker daemons to
+                eliminate build-time timeouts.</li>
+              <li><strong>Unified Next.js React Native Web App</strong>: Built custom Next.js web meeting dashboard that
+                transpiles directly into native Android and iOS components.</li>
+              <li><strong>Single-Binary Server Integration</strong>: Enabled Go static embedding to package the Web
+                interface and the SFU engine into a single runtime executable.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-dot" style="background-color: var(--border-dark);"></div>
+          <div class="timeline-header">
+            <span class="version-tag" style="color: var(--text-muted);">v0.0.1 (Initial SFU Core)</span>
+            <span class="release-date">January 2026</span>
+          </div>
+          <div class="timeline-body" style="opacity: 0.6;">
+            <ul>
+              <li>Initial Selective Forwarding Unit (SFU) WebRTC core setup.</li>
+              <li>Prometheus tracking counters and telemetry logging.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 Samvaad Project. Made in Bharat. Released under the Apache 2.0 License.</p>
+    </div>
+  </footer>
+</body>
+
+</html>
