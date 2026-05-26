@@ -86,7 +86,7 @@ func TestRetryBackoff(t *testing.T) {
 		ri := NewRPCRetryInterceptor(ro)
 
 		errs := make([]error, 3)
-		for i, _ := range errs {
+		for i := range errs {
 			errs[i] = errors.New("test error")
 		}
 		h := ri(psrpc.RPCInfo{}, getClientRpcHandler(errs))
