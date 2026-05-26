@@ -20,7 +20,7 @@ samvaad-server.exe
 # vendor/
 bin/
 proto/
-
+!pkg/proto
 # Mac
 .DS_Store
 
