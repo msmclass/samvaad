@@ -66,8 +66,9 @@ jobs:
 
       - name: Test
         run: |
-          set -euo pipefail
+          set -o pipefail
           MallocNanoZone=0 go test -race -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+          exit ${PIPESTATUS[0]}
 
       # Upload the original go test log as an artifact for later review.
       - name: Upload test log
@@ -83,7 +84,7 @@ jobs:
         id: calc_tag
         run: |
           # 1. Get base version from version.go
-          BASE_VERSION=$(go run -e 'import ( "fmt"; "github.com/msmclass/samvaad/version" ); func main() { fmt.Println(version.Version) }')
+          BASE_VERSION=$(grep -oP 'const Version = "\K[^"]+' version/version.go)
           echo "Base Version: $BASE_VERSION"
           
           # 2. Fetch all tags from Git
