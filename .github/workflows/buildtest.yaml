@@ -58,7 +58,7 @@ jobs:
         run: |
           set -o pipefail
           MallocNanoZone=0 go test -race -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
-          echo "Status ${PIPESTATUS[0]}" 
+          echo ${PIPESTATUS[0]}
 
       # Upload the original go test log as an artifact for later review.
       - name: Upload test log
