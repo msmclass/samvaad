@@ -54,10 +54,20 @@ jobs:
         with:
           version: v2.11.4
 
-      - name: Test
+      - name: Unit Tests
         run: |
           set -o pipefail
-          MallocNanoZone=0 go test -json -v ./... 2>&1 | tee /tmp/gotest.log | gotestfmt
+          # Run all packages EXCEPT the integration test package (./test/) which requires
+          # real network (WebRTC/ICE/DTLS) and is too flaky in CI without isolation.
+          PKGS=$(go list ./... | grep -v 'github.com/msmclass/samvaad/test$')
+          MallocNanoZone=0 go test -json -v -count=1 $PKGS 2>&1 | tee /tmp/gotest-unit.log | gotestfmt
+
+      - name: Integration Tests
+        run: |
+          set -o pipefail
+          # Run integration tests serially (-parallel 1) with a generous timeout so that
+          # WebRTC ICE/DTLS negotiation has time to complete on the CI runner.
+          MallocNanoZone=0 go test -json -v -count=1 -parallel 1 -timeout 12m ./test/... 2>&1 | tee /tmp/gotest-integration.log | gotestfmt
 
       # Upload the original go test log as an artifact for later review.
       - name: Upload test log
@@ -65,8 +75,10 @@ jobs:
         if: always()
         with:
           name: test-log
-          path: /tmp/gotest.log
-          if-no-files-found: error
+          path: |
+            /tmp/gotest-unit.log
+            /tmp/gotest-integration.log
+          if-no-files-found: ignore
 
       - name: Calculate Next Tag
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
