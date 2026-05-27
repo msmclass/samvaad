@@ -15,7 +15,7 @@
 # ==========================================
 # STAGE 1: Build static Next.js frontend
 # ==========================================
-FROM node:18-alpine AS next-builder
+FROM --platform=$BUILDPLATFORM node:18-alpine AS next-builder
 
 WORKDIR /app
 
@@ -34,7 +34,7 @@ RUN npm run build
 # ==========================================
 # STAGE 2: Build embedded Go backend server
 # ==========================================
-FROM golang:1.26-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
 
 ARG TARGETPLATFORM
 ARG TARGETARCH

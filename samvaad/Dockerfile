@@ -1,7 +1,7 @@
 # ==========================================
 # STAGE 1: Build static Next.js frontend
 # ==========================================
-FROM node:18-alpine AS next-builder
+FROM --platform=$BUILDPLATFORM node:18-alpine AS next-builder
 
 WORKDIR /app
 
@@ -20,9 +20,11 @@ RUN npm run build
 # ==========================================
 # STAGE 2: Build embedded Go backend server
 # ==========================================
-FROM golang:1.26-alpine AS go-builder
+FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS go-builder
 
 WORKDIR /app
+
+ARG TARGETARCH
 
 # Copy the backend source
 COPY backend/main.go ./
@@ -32,7 +34,7 @@ RUN rm -rf frontend_out && mkdir -p frontend_out
 COPY --from=next-builder /app/out/ ./frontend_out/
 
 # Compile the Go orchestrator into a static, single binary executable
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o samvaad-app main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH go build -a -installsuffix cgo -o samvaad-app main.go
 
 # ==========================================
 # STAGE 3: Pack lightweight final runner
