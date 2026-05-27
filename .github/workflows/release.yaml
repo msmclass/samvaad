@@ -15,17 +15,51 @@
 name: Build and Release Binaries
 
 on:
+  # Tags pushed by GITHUB_TOKEN do not trigger other workflows (GitHub security
+  # restriction), so we chain off the Test workflow via workflow_run instead.
+  workflow_run:
+    workflows: ["Test"]
+    types: [completed]
+    branches: [main]
   push:
     tags:
-      - 'v*'
+      - 'v*' # direct tag push (e.g. manual) still works
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  resolve-tag:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    # Only run on success when triggered by workflow_run; always run for tag push or manual dispatch.
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    outputs:
+      tag_name: ${{ steps.resolve.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # fetch full history so tags are available
+
+      - name: Resolve tag
+        id: resolve
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+          else
+            git fetch --tags --force
+            TAG_NAME=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          fi
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Resolved tag: ${TAG_NAME}"
+
   build-binaries:
     name: Build samvaad-server for ${{ matrix.goos }}-${{ matrix.goarch }}
+    needs: resolve-tag
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -91,7 +125,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: build-binaries
+    needs: [resolve-tag, build-binaries]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -111,6 +145,7 @@ jobs:
       - name: Publish Release with Assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.resolve-tag.outputs.tag_name }}
           files: |
             release-assets/*
           draft: false
