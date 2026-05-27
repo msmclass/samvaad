@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/msmclass/samvaad/pkg/samvaad/logger"
-	osstat "github.com/mackerelio/go-osstat/cpu"
 )
 
 // CPUTier represents the simulcast quality tier enforced by the CPU governor.
@@ -128,10 +127,9 @@ func (g *CPUGovernor) loop(ctx context.Context) {
 	ticker := time.NewTicker(g.params.SampleInterval)
 	defer ticker.Stop()
 
-	// Capture the initial CPU counters so the first delta is meaningful.
-	prev, err := osstat.Get()
+	sampler, err := newPlatformCPUSampler()
 	if err != nil {
-		g.params.Logger.Warnw("[cpu-governor] cannot read initial CPU stats, defaulting to high tier", err)
+		g.params.Logger.Warnw("[cpu-governor] cannot initialize CPU sampler, defaulting to high tier", err)
 		return
 	}
 
@@ -140,16 +138,13 @@ func (g *CPUGovernor) loop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			curr, err := osstat.Get()
+			pct, err := sampler.sample()
 			if err != nil {
 				g.params.Logger.Warnw("[cpu-governor] CPU stat read error", err)
-				// Keep the previous snapshot so next iteration can produce a delta.
 				continue
 			}
 
-			pct := cpuUsagePct(prev, curr)
 			tier := tierFromPct(pct)
-			prev = curr
 
 			old := CPUTier(g.currentTier.Swap(int32(tier)))
 			if old != tier {
@@ -163,22 +158,6 @@ func (g *CPUGovernor) loop(ctx context.Context) {
 			}
 		}
 	}
-}
-
-// cpuUsagePct computes the CPU busy-percentage between two stat snapshots.
-// The go-osstat Stats struct provides: User, System, Idle, Nice, Total.
-// We compute: busy / total * 100 where busy = Total - Idle.
-//
-// Both snapshots are pointers as returned by osstat.Get().
-func cpuUsagePct(prev, curr *osstat.Stats) float64 {
-	totalDelta := curr.Total - prev.Total
-	if totalDelta == 0 {
-		return 0
-	}
-
-	idleDelta := curr.Idle - prev.Idle
-	busyDelta := float64(totalDelta) - float64(idleDelta)
-	return (busyDelta / float64(totalDelta)) * 100.0
 }
 
 // tierFromPct maps a raw CPU percentage to the appropriate CPUTier.

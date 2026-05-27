@@ -1,4 +1,4 @@
-// Copyright 2023 Samvaad, Inc.
+// Copyright 2026 Samvaad Project, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,25 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build darwin && cgo
+//go:build darwin && !cgo
 
-package hwstats
+package streamallocator
 
-import (
-	"runtime"
+import "errors"
 
-	"github.com/prometheus/procfs"
-	"golang.org/x/sys/unix"
-)
+type platformCPUSampler struct{}
 
-func newPlatformCPUMonitor() (platformCPUMonitor, error) {
-	return newOSStatCPUMonitor()
+func newPlatformCPUSampler() (*platformCPUSampler, error) {
+	return nil, errors.New("cpu governor unsupported on current platform (no cgo)")
 }
 
-func getHostCPUCount(fs procfs.FS) (float64, error) {
-	return float64(runtime.NumCPU()), nil
-}
-
-func getPageSize() int {
-	return unix.Getpagesize()
+func (s *platformCPUSampler) sample() (float64, error) {
+	return 0, errors.New("unsupported")
 }

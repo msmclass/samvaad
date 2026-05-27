@@ -12,25 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build darwin && cgo
+//go:build darwin && !cgo
 
 package hwstats
 
-import (
-	"runtime"
+import "errors"
 
-	"github.com/prometheus/procfs"
-	"golang.org/x/sys/unix"
-)
+type nullMemoryGetter struct{}
 
-func newPlatformCPUMonitor() (platformCPUMonitor, error) {
-	return newOSStatCPUMonitor()
+func (o *nullMemoryGetter) getMemory() (uint64, uint64, error) {
+	return 0, 0, errors.New("memory stats unsupported on current platform (no cgo)")
 }
 
-func getHostCPUCount(fs procfs.FS) (float64, error) {
-	return float64(runtime.NumCPU()), nil
-}
-
-func getPageSize() int {
-	return unix.Getpagesize()
+func newPlatformMemoryGetter() (platformMemoryGetter, error) {
+	return &nullMemoryGetter{}, nil
 }
