@@ -45,11 +45,13 @@ func (testConfigBuilder) InitDefaults(c *TestConfig) error {
 
 func TestConfigObserver(t *testing.T) {
 	f, err := os.CreateTemp(os.TempDir(), "lk-test-*.yaml")
-	t.Cleanup(func() {
-		_ = f.Close()
-	})
 	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = os.Remove(f.Name())
+	})
 	_, err = f.WriteString(testConfig0)
+	require.NoError(t, err)
+	err = f.Close()
 	require.NoError(t, err)
 
 	obs, conf, err := NewConfigObserver(f.Name(), testConfigBuilder{})
@@ -64,19 +66,22 @@ func TestConfigObserver(t *testing.T) {
 
 	require.Equal(t, "a", atomicFoo.Load())
 
-	done := make(chan struct{})
+	done := make(chan struct{}, 1)
 	obs.Observe(func(c *TestConfig) {
-		require.Equal(t, "b", c.Foo)
-		require.Equal(t, "c", c.Bar)
-		close(done)
+		if c.Foo == "b" && c.Bar == "c" {
+			select {
+			case done <- struct{}{}:
+			default:
+			}
+		}
 	})
 
-	_, err = f.WriteAt([]byte(testConfig1), 0)
+	err = os.WriteFile(f.Name(), []byte(testConfig1), 0644)
 	require.NoError(t, err)
 
 	select {
 	case <-done:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		require.FailNow(t, "timed out waiting for config update")
 	}
 

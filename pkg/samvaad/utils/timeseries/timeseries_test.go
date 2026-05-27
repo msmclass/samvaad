@@ -497,6 +497,7 @@ func TestTimeSeries(t *testing.T) {
 		require.Less(t, float64(0.0), tau)
 
 		// overall decreasing
+		ts.ClearSamples()
 		now = time.Now()
 		for val := int64(1); val <= 10; val++ {
 			if val&0x1 == 0 {

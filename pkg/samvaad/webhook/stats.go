@@ -50,17 +50,25 @@ func initWebhookStats(constLabels prometheus.Labels) {
 }
 
 func IncDispatchSuccess() {
-	promWebhookDispatchTotal.WithLabelValues("success", "").Inc()
+	if promWebhookDispatchTotal != nil {
+		promWebhookDispatchTotal.WithLabelValues("success", "").Inc()
+	}
 }
 
 func IncDispatchFailure() {
-	promWebhookDispatchTotal.WithLabelValues("failure", "").Inc()
+	if promWebhookDispatchTotal != nil {
+		promWebhookDispatchTotal.WithLabelValues("failure", "").Inc()
+	}
 }
 
 func IncDispatchDrop(reason string) {
-	promWebhookDispatchTotal.WithLabelValues("drop", reason).Inc()
+	if promWebhookDispatchTotal != nil {
+		promWebhookDispatchTotal.WithLabelValues("drop", reason).Inc()
+	}
 }
 
 func RecordQueueLength(queueLength int) {
-	promWebhookQueueLengthHistogram.Observe(float64(queueLength))
+	if promWebhookQueueLengthHistogram != nil {
+		promWebhookQueueLengthHistogram.Observe(float64(queueLength))
+	}
 }

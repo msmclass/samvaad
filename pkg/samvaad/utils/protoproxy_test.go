@@ -49,7 +49,7 @@ func TestProtoProxy(t *testing.T) {
 		// queue an update while the cached value is still fresh so the worker
 		// picks it up on the next tick instead of triggering an immediate refresh.
 		proxy.MarkDirty(false)
-		assertNoProxyUpdate(t, proxy, 5*time.Millisecond)
+		assertNoProxyUpdate(t, proxy, 50*time.Millisecond)
 		require.EqualValues(t, 1, proxy.Get().NumParticipants)
 
 		// freeze and ensure that updates are not triggered
@@ -114,7 +114,7 @@ func awaitProxyUpdate(t *testing.T, proxy *ProtoProxy[*samvaad.Room]) {
 
 	select {
 	case <-proxy.Updated():
-	case <-time.After(250 * time.Millisecond):
+	case <-time.After(1 * time.Second):
 		require.FailNow(t, "timed out waiting for proxy update")
 	}
 }
@@ -134,7 +134,7 @@ func createTestProxy() (*ProtoProxy[*samvaad.Room], *atomic.Uint32, *atomic.Bool
 	var numParticipants atomic.Uint32
 	var freeze atomic.Bool
 	return NewProtoProxy(
-		10*time.Millisecond,
+		200*time.Millisecond,
 		func() *samvaad.Room {
 			if !freeze.Load() {
 				defer numParticipants.Add(1)

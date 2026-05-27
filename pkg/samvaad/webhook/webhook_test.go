@@ -403,6 +403,8 @@ func TestResourceWebHook(t *testing.T) {
 }
 
 func TestResourceURLNotifierDropped(t *testing.T) {
+	InitWebhookStats(prometheus.Labels{})
+
 	s := newServer(testAddr)
 	require.NoError(t, s.Start())
 	defer s.Stop()
@@ -553,6 +555,8 @@ func TestResourceURLNotifierDropped(t *testing.T) {
 }
 
 func TestResourceURLNotifierLifecycle(t *testing.T) {
+	InitWebhookStats(prometheus.Labels{})
+
 	s := newServer(testAddr)
 	require.NoError(t, s.Start())
 	defer s.Stop()
@@ -701,6 +705,8 @@ func TestResourceURLNotifierLifecycle(t *testing.T) {
 }
 
 func TestResourceURLNotifierFilter(t *testing.T) {
+	InitWebhookStats(prometheus.Labels{})
+
 	s := newServer(testAddr)
 	require.NoError(t, s.Start())
 	defer s.Stop()
