@@ -9,7 +9,7 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json* ./
 
 # Install dependencies (ignoring scripts for security)
-RUN npm install --frozen-lockfile --ignore-scripts
+RUN npm install --legacy-peer-deps --ignore-scripts
 
 # Copy frontend source files
 COPY frontend/ ./
