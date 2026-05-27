@@ -131,20 +131,20 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: false
 
-  merge-manifests:
-    name: Merge Multi-Arch Docker Manifests
-    needs: build-docker
+  # Resolve tags once in a dedicated job so both matrix legs of merge-manifests
+  # use the exact same version strings that the build-docker jobs used.
+  resolve-version:
+    name: Resolve version tag
     runs-on: ubuntu-latest
+    needs: build-docker
     if: github.event_name != 'pull_request'
-    strategy:
-      fail-fast: false
-      matrix:
-        image: [server, app]
+    outputs:
+      full_version: ${{ steps.resolve_tag.outputs.full_version }}
+      base_version: ${{ steps.resolve_tag.outputs.base_version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Resolve tag to publish
         id: resolve_tag
         run: |
@@ -154,8 +154,6 @@ jobs:
             git fetch --tags --force
             TAG_NAME=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
           fi
-
-          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
 
           if [[ "${TAG_NAME}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+)$ ]]; then
             BASE_VERSION="${BASH_REMATCH[1]}"
@@ -167,7 +165,20 @@ jobs:
           fi
           echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
           echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
-          echo "Resolved tag: ${TAG_NAME} → base=${BASE_VERSION} full=${FULL_VERSION}"
+          echo "Resolved: base=${BASE_VERSION} full=${FULL_VERSION}"
+
+  merge-manifests:
+    name: Merge Multi-Arch Docker Manifests (${{ matrix.image }})
+    needs: [build-docker, resolve-version]
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [server, app]
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -186,7 +197,19 @@ jobs:
             TAG_PREFIX="app-"
           fi
 
-          TAGS=("latest" "${{ steps.resolve_tag.outputs.full_version }}" "${{ steps.resolve_tag.outputs.base_version }}")
+          FULL_VERSION="${{ needs.resolve-version.outputs.full_version }}"
+          BASE_VERSION="${{ needs.resolve-version.outputs.base_version }}"
+
+          # Build a deduplicated list of tags to merge.
+          # When full_version == base_version we only need one entry.
+          declare -A seen
+          TAGS=()
+          for v in "latest" "${FULL_VERSION}" "${BASE_VERSION}"; do
+            if [[ -z "${seen[$v]+_}" ]]; then
+              seen[$v]=1
+              TAGS+=("$v")
+            fi
+          done
 
           echo "Waiting 15 seconds for registry indexing propagation..."
           sleep 15
