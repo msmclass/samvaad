@@ -68,9 +68,11 @@ Our GitHub Actions pipeline automatically detects pushed tags and creates produc
 
 ### Multi-Platform Docker Images (AMD64 & ARM64)
 Production Docker images are automatically compiled for all major server environments using Docker Buildx and published to **GitHub Container Registry (GHCR)**:
-- **Base Registry**: `ghcr.io/msmclass/samvaad`
+- **Base Registries**:
+  - `ghcr.io/msmclass/samvaad-server` (Unified API Backend and Signaling Node)
+  - `ghcr.io/msmclass/samvaad-app` (Interactive Client Portal / Dashboard UI)
 - **Supported Architectures**:
   - `linux/amd64` (Standard x86/Intel/AMD 64-bit platforms)
   - `linux/arm64` (ARM 64-bit platforms, Apple Silicon, AWS Graviton, etc.)
-- **Tags**: On each release, the image is automatically tagged with `latest`, the exact version tag (e.g. `v1.0.1`), and branch tags.
+- **Tags**: On each release, both images are automatically tagged with `latest`, the exact version tag (e.g. `v1.0.1`), and major/minor version tags.
 

@@ -31,9 +31,46 @@ on:
       - 'v*' # direct tag push (e.g. manual) still works
 
 jobs:
+  resolve-version:
+    name: Resolve version tag
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    outputs:
+      full_version: ${{ steps.resolve_tag.outputs.full_version }}
+      base_version: ${{ steps.resolve_tag.outputs.base_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve tag to publish
+        id: resolve_tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+          else
+            git fetch --tags --force
+            TAG_NAME=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          fi
+
+          if [[ "${TAG_NAME}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+)$ ]]; then
+            BASE_VERSION="${BASH_REMATCH[1]}"
+            FULL_VERSION="${BASE_VERSION}.${BASH_REMATCH[2]}"
+          else
+            CLEAN="${TAG_NAME#v}"
+            BASE_VERSION="${CLEAN}"
+            FULL_VERSION="${CLEAN}"
+          fi
+          echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
+          echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
+          echo "Resolved: base=${BASE_VERSION} full=${FULL_VERSION}"
+
   build-docker:
     name: Build ${{ matrix.image }} (${{ matrix.arch }})
     runs-on: ubuntu-latest
+    needs: resolve-version
     if: >
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
@@ -69,39 +106,16 @@ jobs:
           version: latest
           args: generate
 
-      - name: Resolve tag to publish
-        id: resolve_tag
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            TAG_NAME="${{ github.ref_name }}"
-          else
-            git fetch --tags --force
-            TAG_NAME=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-          fi
-
-          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
-
-          if [[ "${TAG_NAME}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+)$ ]]; then
-            BASE_VERSION="${BASH_REMATCH[1]}"
-            FULL_VERSION="${BASE_VERSION}.${BASH_REMATCH[2]}"
-          else
-            CLEAN="${TAG_NAME#v}"
-            BASE_VERSION="${CLEAN}"
-            FULL_VERSION="${CLEAN}"
-          fi
-          echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
-          echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
-          echo "Resolved tag: ${TAG_NAME} → base=${BASE_VERSION} full=${FULL_VERSION}"
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/msmclass/samvaad
+          images: |
+            ${{ matrix.image == 'server' && 'ghcr.io/msmclass/samvaad-server' || 'ghcr.io/msmclass/samvaad-app' }}
           tags: |
-            type=raw,value=${{ matrix.image == 'server' && '' || 'app-' }}latest-${{ matrix.arch }}
-            type=raw,value=${{ matrix.image == 'server' && '' || 'app-' }}${{ steps.resolve_tag.outputs.full_version }}-${{ matrix.arch }}
-            type=raw,value=${{ matrix.image == 'server' && '' || 'app-' }}${{ steps.resolve_tag.outputs.base_version }}-${{ matrix.arch }}
+            type=raw,value=latest-${{ matrix.arch }}
+            type=raw,value=${{ needs.resolve-version.outputs.full_version }}-${{ matrix.arch }}
+            type=raw,value=${{ needs.resolve-version.outputs.base_version }}-${{ matrix.arch }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -131,42 +145,6 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: false
 
-  # Resolve tags once in a dedicated job so both matrix legs of merge-manifests
-  # use the exact same version strings that the build-docker jobs used.
-  resolve-version:
-    name: Resolve version tag
-    runs-on: ubuntu-latest
-    needs: build-docker
-    if: github.event_name != 'pull_request'
-    outputs:
-      full_version: ${{ steps.resolve_tag.outputs.full_version }}
-      base_version: ${{ steps.resolve_tag.outputs.base_version }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Resolve tag to publish
-        id: resolve_tag
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            TAG_NAME="${{ github.ref_name }}"
-          else
-            git fetch --tags --force
-            TAG_NAME=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
-          fi
-
-          if [[ "${TAG_NAME}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+)$ ]]; then
-            BASE_VERSION="${BASH_REMATCH[1]}"
-            FULL_VERSION="${BASE_VERSION}.${BASH_REMATCH[2]}"
-          else
-            CLEAN="${TAG_NAME#v}"
-            BASE_VERSION="${CLEAN}"
-            FULL_VERSION="${CLEAN}"
-          fi
-          echo "base_version=${BASE_VERSION}" >> $GITHUB_OUTPUT
-          echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
-          echo "Resolved: base=${BASE_VERSION} full=${FULL_VERSION}"
-
   merge-manifests:
     name: Merge Multi-Arch Docker Manifests (${{ matrix.image }})
     needs: [build-docker, resolve-version]
@@ -189,12 +167,10 @@ jobs:
 
       - name: Create and Push Multi-Arch Manifests
         run: |
-          IMAGE_NAME="ghcr.io/msmclass/samvaad"
-
           if [[ "${{ matrix.image }}" == "server" ]]; then
-            TAG_PREFIX=""
+            IMAGE_NAME="ghcr.io/msmclass/samvaad-server"
           else
-            TAG_PREFIX="app-"
+            IMAGE_NAME="ghcr.io/msmclass/samvaad-app"
           fi
 
           FULL_VERSION="${{ needs.resolve-version.outputs.full_version }}"
@@ -215,14 +191,13 @@ jobs:
           sleep 15
 
           for tag in "${TAGS[@]}"; do
-            target_tag="${TAG_PREFIX}${tag}"
-            echo "Creating multi-arch manifest for ${IMAGE_NAME}:${target_tag}..."
+            echo "Creating multi-arch manifest for ${IMAGE_NAME}:${tag}..."
 
             # imagetools create works correctly even when the source tags
             # are manifest lists (as produced by build-push-action@v6).
             # It combines them into a new multi-arch OCI index.
             docker buildx imagetools create \
-              --tag "${IMAGE_NAME}:${target_tag}" \
-              "${IMAGE_NAME}:${target_tag}-amd64" \
-              "${IMAGE_NAME}:${target_tag}-arm64"
+              --tag "${IMAGE_NAME}:${tag}" \
+              "${IMAGE_NAME}:${tag}-amd64" \
+              "${IMAGE_NAME}:${tag}-arm64"
           done
