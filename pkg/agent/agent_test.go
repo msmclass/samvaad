@@ -31,7 +31,23 @@ func TestAgent(t *testing.T) {
 
 		worker := server.SimulateAgentWorker()
 		worker.Register(testAgentName, samvaad.JobType_JT_ROOM)
+
+		// Wait for the server to acknowledge registration before sending a job.
+		// Register() only enqueues a message asynchronously; the server processes
+		// it in a separate goroutine. Without this wait, JobRequest() can arrive
+		// before the worker is known to the server, causing an immediate RPC error
+		// which fails require.NoError(t, err) below – not a timeout, an immediate fail.
+		regResponses := worker.RegisterWorkerResponses.Observe()
+		defer regResponses.Stop()
+		select {
+		case <-regResponses.Events():
+			// worker is now registered with the server
+		case <-time.After(5 * time.Second):
+			require.Fail(t, "worker registration timeout")
+		}
+
 		jobAssignments := worker.JobAssignments.Observe()
+		defer jobAssignments.Stop()
 
 		job := &samvaad.Job{
 			Id:         guid.New(guid.AgentJobPrefix),
