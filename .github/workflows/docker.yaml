@@ -178,10 +178,8 @@ jobs:
 
       - name: Create and Push Multi-Arch Manifests
         run: |
-          export DOCKER_CLI_EXPERIMENTAL=enabled
-          
           IMAGE_NAME="ghcr.io/msmclass/samvaad"
-          
+
           if [[ "${{ matrix.image }}" == "server" ]]; then
             TAG_PREFIX=""
           else
@@ -190,22 +188,18 @@ jobs:
 
           TAGS=("latest" "${{ steps.resolve_tag.outputs.full_version }}" "${{ steps.resolve_tag.outputs.base_version }}")
 
-          # Sleep briefly to ensure registry indexing has fully propagated and completed
           echo "Waiting 15 seconds for registry indexing propagation..."
           sleep 15
 
           for tag in "${TAGS[@]}"; do
             target_tag="${TAG_PREFIX}${tag}"
             echo "Creating multi-arch manifest for ${IMAGE_NAME}:${target_tag}..."
-            
-            # Remove existing manifest locally if any
-            docker manifest rm "${IMAGE_NAME}:${target_tag}" || true
-            
-            # Create manifest combining amd64 and arm64 single-platform images using clean compatible syntax
-            docker manifest create "${IMAGE_NAME}:${target_tag}" \
+
+            # imagetools create works correctly even when the source tags
+            # are manifest lists (as produced by build-push-action@v6).
+            # It combines them into a new multi-arch OCI index.
+            docker buildx imagetools create \
+              --tag "${IMAGE_NAME}:${target_tag}" \
               "${IMAGE_NAME}:${target_tag}-amd64" \
               "${IMAGE_NAME}:${target_tag}-arm64"
-              
-            # Push manifest to registry
-            docker manifest push "${IMAGE_NAME}:${target_tag}"
           done
