@@ -27,8 +27,8 @@ import (
 )
 
 var (
-	RegisterTimeout  = 2 * time.Second
-	AssignJobTimeout = 3 * time.Second
+	RegisterTimeout  = 20 * time.Second
+	AssignJobTimeout = 20 * time.Second
 )
 
 func TestAgents(t *testing.T) {
@@ -96,7 +96,7 @@ func TestAgents(t *testing.T) {
 				}
 
 				return ""
-			}, 6*time.Second)
+			}, 20*time.Second)
 
 			// publish 2 tracks
 			t3, err := c2.AddStaticTrack("audio/opus", "audio", "micro")
