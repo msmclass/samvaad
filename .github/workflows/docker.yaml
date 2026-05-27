@@ -93,24 +93,15 @@ jobs:
           echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
           echo "Resolved tag: ${TAG_NAME} → base=${BASE_VERSION} full=${FULL_VERSION}"
 
-      - name: Determine Image Name
-        id: image_name
-        run: |
-          if [[ "${{ matrix.image }}" == "server" ]]; then
-            echo "name=ghcr.io/msmclass/samvaad-server" >> $GITHUB_OUTPUT
-          else
-            echo "name=ghcr.io/msmclass/samvaad" >> $GITHUB_OUTPUT
-          fi
-
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.image_name.outputs.name }}
+          images: ghcr.io/msmclass/samvaad
           tags: |
-            type=raw,value=latest-${{ matrix.arch }}
-            type=raw,value=${{ steps.resolve_tag.outputs.full_version }}-${{ matrix.arch }}
-            type=raw,value=${{ steps.resolve_tag.outputs.base_version }}-${{ matrix.arch }}
+            type=raw,value=${{ matrix.image == 'server' && '' || 'app-' }}latest-${{ matrix.arch }}
+            type=raw,value=${{ matrix.image == 'server' && '' || 'app-' }}${{ steps.resolve_tag.outputs.full_version }}-${{ matrix.arch }}
+            type=raw,value=${{ matrix.image == 'server' && '' || 'app-' }}${{ steps.resolve_tag.outputs.base_version }}-${{ matrix.arch }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -185,25 +176,28 @@ jobs:
 
       - name: Create and Push Multi-Arch Manifests
         run: |
+          IMAGE_NAME="ghcr.io/msmclass/samvaad"
+          
           if [[ "${{ matrix.image }}" == "server" ]]; then
-            IMAGE_NAME="ghcr.io/msmclass/samvaad-server"
+            TAG_PREFIX=""
           else
-            IMAGE_NAME="ghcr.io/msmclass/samvaad"
+            TAG_PREFIX="app-"
           fi
 
           TAGS=("latest" "${{ steps.resolve_tag.outputs.full_version }}" "${{ steps.resolve_tag.outputs.base_version }}")
 
           for tag in "${TAGS[@]}"; do
-            echo "Creating multi-arch manifest for ${IMAGE_NAME}:${tag}..."
+            target_tag="${TAG_PREFIX}${tag}"
+            echo "Creating multi-arch manifest for ${IMAGE_NAME}:${target_tag}..."
             
             # Remove existing manifest locally if any
-            docker manifest rm "${IMAGE_NAME}:${tag}" || true
+            docker manifest rm "${IMAGE_NAME}:${target_tag}" || true
             
             # Create manifest combining amd64 and arm64 single-platform images
-            docker manifest create "${IMAGE_NAME}:${tag}" \
-              --amend "${IMAGE_NAME}:${tag}-amd64" \
-              --amend "${IMAGE_NAME}:${tag}-arm64"
+            docker manifest create "${IMAGE_NAME}:${target_tag}" \
+              --amend "${IMAGE_NAME}:${target_tag}-amd64" \
+              --amend "${IMAGE_NAME}:${target_tag}-arm64"
               
             # Push manifest to registry
-            docker manifest push "${IMAGE_NAME}:${tag}"
+            docker manifest push "${IMAGE_NAME}:${target_tag}"
           done
