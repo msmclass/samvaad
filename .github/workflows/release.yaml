@@ -83,13 +83,7 @@ jobs:
           - goos: darwin
             goarch: arm64
             artifact_name: samvaad-server-darwin-arm64
-          # Mobile platforms
-          - goos: android
-            goarch: arm64
-            artifact_name: samvaad-client-android-arm64
-          - goos: ios
-            goarch: arm64
-            artifact_name: samvaad-client-ios-arm64
+
 
     steps:
       - name: Checkout Code

@@ -52,6 +52,9 @@ jobs:
       - name: Download Go modules
         run: go mod download
 
+      - name: Install stringer
+        run: go install golang.org/x/tools/cmd/stringer@latest
+
       - name: Generate code
         uses: magefile/mage-action@a662bd8c29d8106879588cfff83b2faf6e6f59db # v4
         with:
