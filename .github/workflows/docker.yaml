@@ -129,6 +129,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: false
 
   merge-manifests:
     name: Merge Multi-Arch Docker Manifests
@@ -136,6 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     strategy:
+      fail-fast: false
       matrix:
         image: [server, app]
     steps:
@@ -176,6 +178,8 @@ jobs:
 
       - name: Create and Push Multi-Arch Manifests
         run: |
+          export DOCKER_CLI_EXPERIMENTAL=enabled
+          
           IMAGE_NAME="ghcr.io/msmclass/samvaad"
           
           if [[ "${{ matrix.image }}" == "server" ]]; then
@@ -186,6 +190,10 @@ jobs:
 
           TAGS=("latest" "${{ steps.resolve_tag.outputs.full_version }}" "${{ steps.resolve_tag.outputs.base_version }}")
 
+          # Sleep briefly to ensure registry indexing has fully propagated and completed
+          echo "Waiting 15 seconds for registry indexing propagation..."
+          sleep 15
+
           for tag in "${TAGS[@]}"; do
             target_tag="${TAG_PREFIX}${tag}"
             echo "Creating multi-arch manifest for ${IMAGE_NAME}:${target_tag}..."
@@ -193,10 +201,10 @@ jobs:
             # Remove existing manifest locally if any
             docker manifest rm "${IMAGE_NAME}:${target_tag}" || true
             
-            # Create manifest combining amd64 and arm64 single-platform images
+            # Create manifest combining amd64 and arm64 single-platform images using clean compatible syntax
             docker manifest create "${IMAGE_NAME}:${target_tag}" \
-              --amend "${IMAGE_NAME}:${target_tag}-amd64" \
-              --amend "${IMAGE_NAME}:${target_tag}-arm64"
+              "${IMAGE_NAME}:${target_tag}-amd64" \
+              "${IMAGE_NAME}:${target_tag}-arm64"
               
             # Push manifest to registry
             docker manifest push "${IMAGE_NAME}:${target_tag}"
