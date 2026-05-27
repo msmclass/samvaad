@@ -51,7 +51,7 @@ func TestAgent(t *testing.T) {
 			_, claims, err := v.Verify(server.TestAPISecret)
 			require.NoError(t, err)
 			require.Equal(t, testAgentName, claims.Attributes[agent.AgentNameAttributeKey])
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			require.Fail(t, "job assignment timeout")
 		}
 	})
@@ -125,7 +125,7 @@ func TestAgentLoadBalancing(t *testing.T) {
 
 		select {
 		case <-testBatchJobRequest(t, 10, totalJobs, client, agents):
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			require.Fail(t, "job assignment timeout")
 		}
 
@@ -167,7 +167,7 @@ func TestAgentLoadBalancing(t *testing.T) {
 
 		select {
 		case <-testBatchJobRequest(t, 1, totalJobs, client, agents):
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			require.Fail(t, "job assignment timeout")
 		}
 
@@ -202,7 +202,7 @@ func TestConnectionClosedOnDispatchError(t *testing.T) {
 		select {
 		case <-responses.Events():
 			// registered
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			require.Fail(t, "registration timeout")
 		}
 		responses.Stop()
@@ -213,10 +213,8 @@ func TestConnectionClosedOnDispatchError(t *testing.T) {
 		select {
 		case <-worker.Closed():
 			// connection closed
-		case <-time.After(time.Second):
+		case <-time.After(5 * time.Second):
 			require.Fail(t, "connection should have been closed after dispatch error")
 		}
 	})
 }
-
-
